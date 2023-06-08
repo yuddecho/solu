@@ -79,7 +79,7 @@ def main():
     # acid_encoding = 'one-hot'
     acid_encoding = 'natural-number'
     train_epoch = 100
-    batch_size = 1000
+    batch_size = 3000
     learn_rate = 0.001
     model_pth_save_path = f'{root}/model.pth'
     loss_pkl_save_path = f'{root}/loos.pkl'
