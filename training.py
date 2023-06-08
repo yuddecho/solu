@@ -13,12 +13,11 @@ from args import root, train_solu_dataset, train_insolu_dataset
 
 
 # 训练
-def model_train(pds, te, bs, lr, mp, uc, de):
+def model_train(pds, te, bs, lr, mp, de):
     protein_dataset = pds
     train_epoch = te
     batch_size = bs
     model_pth_save_path = mp
-    use_cuda = uc
     device = de
 
     # 数据
@@ -33,9 +32,6 @@ def model_train(pds, te, bs, lr, mp, uc, de):
 
     model.to(device)
 
-    # if use_cuda:
-    #     model = model.cuda()
-
     # 定义优化器和损失函数
     optimization = torch.optim.Adam(model.parameters(), lr)
     loss_func = nn.CrossEntropyLoss()  # 交叉熵
@@ -46,8 +42,7 @@ def model_train(pds, te, bs, lr, mp, uc, de):
     # 训练网络
     for epoch in range(train_epoch):
         for step, (x, y) in enumerate(train_loader):
-            if use_cuda:
-                x, y = x.to(device), y.to(device)
+            x, y = x.to(device), y.to(device)
 
             out = model(x)
             loss = loss_func(out, y)
@@ -72,13 +67,15 @@ def model_train(pds, te, bs, lr, mp, uc, de):
 
 
 # main
-def main(de):
+def main():
     # 数据
     train_solu = train_solu_dataset
     train_insolu = train_insolu_dataset
 
     # args
-    use_cuda = False
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
     # acid_encoding = 'one-hot'
     acid_encoding = 'natural-number'
     train_epoch = 100
@@ -91,7 +88,7 @@ def main(de):
     protein_dataset = ProteinDataset(train_solu, train_insolu, acid_encoding)
 
     # train
-    loss = model_train(pds=protein_dataset, te=train_epoch, bs=batch_size, lr=learn_rate, mp=model_pth_save_path, uc=use_cuda, de=de)
+    loss = model_train(pds=protein_dataset, te=train_epoch, bs=batch_size, lr=learn_rate, mp=model_pth_save_path, de=device)
 
     # save loss
     with open(loss_pkl_save_path, 'wb') as w:
@@ -99,8 +96,4 @@ def main(de):
 
 
 if __name__ == '__main__':
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    main(de=device)
+    main()
