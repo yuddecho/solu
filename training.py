@@ -32,11 +32,10 @@ class Training:
         # acid_encoding = 'one-hot'
         self.acid_encoding = 'natural-number'
         self.epoch = 300
-        self.curr_epoch = 1
+        self.curr_epoch = 0
         self.batch_size = 2000
         self.learn_rate = 0.001
-        self.model_pth_save_path = f'{root}/model.pth'
-        self.loss_pkl_save_path = f'{root}/loos.pkl'
+
         self.checkpoint_path = f'{root}/checkpoint.pt'
 
         self.model = KMersCNN()
@@ -45,7 +44,7 @@ class Training:
         self.optimizer = torch.optim.Adam(self.model.parameters(), self.learn_rate)
         self.loss_func = nn.CrossEntropyLoss()  # 交叉熵
 
-        self.loss_data = f'{root}/loos.scv'
+        self.loss_data = f'{root}/loos.csv'
         self.loss_data_a = open(self.loss_data, 'a', encoding='utf-8')
         self.last_loos = 10000
 
@@ -72,8 +71,8 @@ class Training:
         log(f'batch size: {self.batch_size}')
         log(f'learn rate: {self.learn_rate}')
         log(f'device: {self.device}')
-        log(f'{self.model_pth_save_path}')
-        log(f'{self.loss_pkl_save_path}')
+        log(f'{self.checkpoint_path}')
+        log(f'{self.loss_data}')
         log(f'\n')
 
     def run(self):
@@ -92,7 +91,7 @@ class Training:
         self.model.to(self.device)
 
         # 训练网络
-        bar = tqdm(total=self.epoch, desc="started training")
+        bar = tqdm(total=self.epoch-1, desc="started training")
         bar.update(self.curr_epoch)
         for epoch in range(self.curr_epoch, self.epoch):
             loss_data = []
@@ -109,7 +108,7 @@ class Training:
                 # 每50步打印一下结果
                 # if step % 2 == 0:
                 loss_data.append(loss.item())
-                self.loss_data_a.write(f'{epoch},{step},{loss.item()}\n')
+                self.loss_data_a.write(f'{epoch+1},{step+1},{loss.item()}\n')
                 log(f'Epoch:{epoch + 1} Step:{step + 1} Train loss:{loss.item()}', is_print=False)
 
                 if loss.item() < self.last_loos:
@@ -123,7 +122,7 @@ class Training:
                         'optimizer_state_dict': self.optimizer.state_dict(),
                         'loss': self.last_loos,
                     }
-                    torch.save(checkpoint, self.model_pth_save_path)
+                    torch.save(checkpoint, self.checkpoint_path)
 
             bar.update(1)
             bar.set_description(f'epoch: {epoch}, loos: {sum(loss_data)/len(loss_data)}')
