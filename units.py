@@ -2,6 +2,8 @@
 
 import matplotlib.pyplot as plt
 
+from args import log_file
+
 
 # 数据分布曲线，用来查看loss的变化
 def polt_curve(data):
@@ -39,3 +41,12 @@ def binary_search(strs: list, target: str) -> bool:
             return True
 
     return False
+
+
+# 日志文件
+def log(msg, is_print=True):
+    with open(log_file, 'a', encoding='utf-8') as w:
+        w.write(f'{msg}\n')
+        if is_print:
+            print(msg)
+

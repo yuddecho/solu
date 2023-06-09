@@ -6,6 +6,8 @@ is_test = False
 
 root = '../data'
 
+log_file = f'{root}/train.log'
+
 sample_train_solu_set = os.path.join(root, 'dataset/sample_train_solu_set.fasta')
 sample_train_insolu_set = os.path.join(root, 'dataset/sample_train_insolu_set.fasta')
 

@@ -7,7 +7,7 @@ import numpy as np
 import pickle
 import os
 
-from units import binary_search
+from units import binary_search, log
 from args import root, train_solu_dataset, train_insolu_dataset, seq_max_len
 
 
@@ -48,9 +48,11 @@ class ProteinDataset(Dataset):
         self.id_seq_natural_number_encode = {}
         self.seq_natural_number_recode = False  # False 尽可能是读取已编码数据
         self.id_seq_natural_number_encode_dict_pkl = f'{root}/seq_nn_encode.pkl'
+        log(f'{self.id_seq_natural_number_encode_dict_pkl}')
 
         # one hot ecode file for dir : dict: python pickle object, key: id, value: seq encode vector
         self.seq_one_hot_encode_dir = f'{root}/one_hot'
+        log(f'{self.seq_one_hot_encode_dir}')
 
         # init
 
@@ -173,7 +175,7 @@ class ProteinDataset(Dataset):
         # 读取已编码数据 215874条数据，3.4G大小
         if not self.seq_natural_number_recode and os.path.exists(
                 self.id_seq_natural_number_encode_dict_pkl):
-            print(
+            log(
                 f'Info: natural number encode, find {self.id_seq_natural_number_encode_dict_pkl}, loading...'
             )
             with open(self.id_seq_natural_number_encode_dict_pkl, 'rb') as f:
