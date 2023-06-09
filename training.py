@@ -45,7 +45,6 @@ class Training:
         self.loss_func = nn.CrossEntropyLoss()  # 交叉熵
 
         self.loss_data = f'{root}/loos.csv'
-        self.loss_data_a = open(self.loss_data, 'a', encoding='utf-8')
         self.last_loos = 10000
 
         # checkpoint
@@ -74,6 +73,10 @@ class Training:
         log(f'{self.checkpoint_path}')
         log(f'{self.loss_data}')
         log(f'\n')
+
+    def save_loss(self, msg):
+        with open(self.loss_data, 'a', encoding='utf-8') as w:
+            w.write(f'{msg}\n')
 
     def run(self):
         # dataset
@@ -108,7 +111,7 @@ class Training:
                 # 每50步打印一下结果
                 # if step % 2 == 0:
                 loss_data.append(loss.item())
-                self.loss_data_a.write(f'{epoch+1},{step+1},{loss.item()}\n')
+                self.save_loss(f'{epoch+1},{step+1},{loss.item()}\n')
                 log(f'Epoch:{epoch + 1} Step:{step + 1} Train loss:{loss.item()}', is_print=False)
 
                 if loss.item() < self.last_loos:
@@ -130,9 +133,6 @@ class Training:
             self.last_stop_round_count_epoch -= 1
             if self.last_stop_round_count_epoch == 0:
                 break
-
-    def __del__(self):
-        self.loss_data_a.close()
 
 
 def setup_seed(seed=2023):
