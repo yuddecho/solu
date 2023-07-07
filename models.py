@@ -6,6 +6,8 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from args import seq_max_len, acid_numb
+
 
 # 模型参数
 class CnnConfig:
@@ -26,10 +28,10 @@ class CnnConfig:
 class ModelConfig:
     def __init__(self):
         # 原始数据：batch*seq_len*1,
-        self.seq_len = 1284
+        self.seq_len = seq_max_len
 
         # 嵌入参数: 输入 batch*seq_len*1 -> batch*seq_len*64
-        self.num_embeddings = 26
+        self.num_embeddings = acid_numb + 1
         self.embedding_dim = 64
 
         # 经过变换：-> batch*64*seq_len，输入通道都是

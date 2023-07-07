@@ -1,0 +1,55 @@
+数据源：
+- TargetTrack DB: https://zenodo.org/record/821654
+- PDB: https://www.rcsb.org/
+- Chang: https://academic.oup.com/bib/article/15/6/953/179773
+- NESG: https://loschmidt.chemi.muni.cz/soluprot/?page=download
+
+TargetTrack DB 数据采集: 从论文附件中下载数据库工程文件，数据库所有数据由一个XML格式文件构成
+- 1 获取原始数据: 从XML文件中获取每条蛋白数据的 targetId, status, sequence, annotation, 存为 tt.csv
+  - targetId: target/targetId
+  - status: target/status
+  - sequence: target/targetSequenceList/targetSequence/oneLetterCode
+  - annotation: 由多个标签构成
+    - target/targetName
+    - target/targetAnnotation
+    - target/targetRationale
+    - target/remark
+    - target/laboratoryList/lab
+    - target/targetPartnershipList/targetPartnership/partnershipName
+    - target/targetSequenceList/targetSequence/sequenceName
+- 2 数据清洗及溶解度推断, 存为 tt-solu.csv, tt-insolu.csv
+  - 根据关键词从 annotation 中去除 跨膜蛋白
+    - transmembrane protein
+    - Claudin(Claudins are a family of nearly two dozen transmembrane proteins)
+  - 去除不规范 sequence
+    - 确定为蛋白质序列
+    - 含有6个 His 标签
+    - 含有连续2个及2个以上未知氨基酸 X
+    - 序列长度 seq_len: [20, 2004]
+  - 根据 status 推断是否可溶, 作为第五列 solubility
+    - status 标签有: ['work stopped', 'in PDB', 'test target', 'selected', 'purified', 'expressed', 'soluble', 'diffraction', 'crystal structure', 'crystallized', 'cloned', 'diffraction-quality crystals', 'NMR assigned', 'native diffraction-data', 'phasing diffraction-data', 'HSQC satisfactory', 'NMR structure', 'other', 'mass spec verified', 'expression tested', 'biological assay', 'membrane protein solubilized', 'EM images', 'in BMRB', 'EM fitted model']
+    - ['in PDB', 'soluble', 'diffraction', 'crystal structure', 'crystallized', 'diffraction-quality crystals', 'NMR assigned', 'native diffraction-data', 'phasing diffraction-data', 'HSQC satisfactory', 'NMR structure', 'in BMRB'] 标记为可溶 solu, 其他标记成不可溶 insolu
+
+数据清洗：
+- [data_cleaning.py](data_cleaning.py) 对各个数据源进行数据采集和清洗，结果保存在 data/db/cleaned
+- [mmseqs_script.py](mmseqs_script.py) 生成调用 mmseqs 脚本，进行 降低数据冗余
+  - ref: https://github.com/soedinglab/MMseqs2
+  - cleaned/
+    - tt_solu(insolu), pdb_solu, chang_solu(insolu), nesg_solu(insolu)
+  - 各个数据源去除同一性超过90%的数据
+  - 同一数据源可溶与不可溶数据之间去除同一性为 100% 的数据
+  - 
+  - 去除 tt_solu 中与 pdb_solu 同一性超过 90% 的数据
+  - 去除 tt_insolu 中与 pdb_solu 同一性为 100% 的数据
+  - 去除 chang_insolu 中与 pdb_solu 同一性为 100% 的数据
+  - 去除 nesg_insolu 中与 pdb_solu 同一性为 100% 的数据
+  - 
+  - 合并 tt_solu 与 pdb_solu 数据，得到 tt_pdb_solu
+  - 
+  - 去除 tt_pdb_solu 中与 chang_solu 同一性超过 30% 的数据
+  - 去除 tt_insolu 中与 chang_insolu 同一性超过 30% 的数据
+  - 去除 tt_pdb_solu 中与 nesg_solu 同一性超过 30% 的数据
+  - 去除 tt_insolu 中与 nesg_insolu 同一性超过 30% 的数据
+- [tmbed_script.py](tmbed_script.py) 生成调用 tmbed 脚本，用于去除膜蛋白
+  - ref: https://github.com/BernhoferM/TMbed
+  - 这里生成的脚本，是用于服务器调用

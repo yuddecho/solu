@@ -5,16 +5,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.backends import cudnn
 
-import pickle
 import os
-import time
 import random
 import numpy as np
 from tqdm import tqdm
 
 from dataset import ProteinDataset
 from models import KMersCNN
-from args import root, train_solu_dataset, train_insolu_dataset
+from args import root, train_solu_dataset, train_insolu_dataset, test_chang_solu, test_chang_insolu, test_nesg_solu, test_nesg_insolu
 from units import log
 
 
@@ -28,6 +26,12 @@ class Training:
         # 数据
         self.train_solu = train_solu_dataset
         self.train_insolu = train_insolu_dataset
+
+        self.test_chang_solu = test_chang_solu
+        self.test_chang_insolu = test_chang_insolu
+
+        self.test_nesg_solu = test_nesg_solu
+        self.test_nesg_insolu = test_nesg_insolu
 
         # acid_encoding = 'one-hot'
         self.acid_encoding = 'natural-number'
@@ -45,16 +49,18 @@ class Training:
         self.loss_func = nn.CrossEntropyLoss()  # 交叉熵
 
         self.loss_data = f'{root}/loos.csv'
-        self.last_loos = 10000
+        self.save_loss('init ...')
+
+        self.last_acc = -1
 
         # checkpoint
-        self.resume = True
+        self.resume = False
         if self.resume and os.path.exists(self.checkpoint_path):
             checkpoint = torch.load(self.checkpoint_path)
             self.model.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
             self.curr_epoch = checkpoint['epoch'] + 1
-            self.last_loss = checkpoint['loss']
+            self.last_acc = checkpoint['acc']
 
         self.last_stop_round_count_epoch = 3
 
@@ -78,12 +84,60 @@ class Training:
         with open(self.loss_data, 'a', encoding='utf-8') as w:
             w.write(f'{msg}\n')
 
+    def _train(self, data_loader):
+        # https://www.jianshu.com/p/1cc53eef82bf
+        # 每一批训练
+        self.model.train()
+        total_loss_data = 0
+        total_acc = 0
+
+        with torch.enable_grad():
+            for step, (x, y) in enumerate(data_loader):
+                x, y = x.to(self.device), y.to(self.device)
+
+                out = self.model(x)
+                # 这里缺一个评估准确率的
+
+                loss = self.loss_func(out, y)
+
+                total_acc += (out.argmax(1) == y).sum()
+                total_loss_data += loss.item()
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+        return total_loss_data / len(data_loader), total_acc / len(data_loader)
+
+    def _test(self, data_loader):
+        self.model.eval()
+        total_loss_data = 0
+        total_acc = 0
+
+        with torch.no_grad():
+            for step, (x, y) in enumerate(data_loader):
+                x, y = x.to(self.device), y.to(self.device)
+
+                out = self.model(x)
+                loss = self.loss_func(out, y)
+
+                total_acc += (out.argmax(1) == y).sum()
+                total_loss_data += loss.item()
+
+        return total_loss_data / len(data_loader), total_acc / len(data_loader)
+
+        pass
+
     def run(self):
         # dataset
         protein_dataset = ProteinDataset(self.train_solu, self.train_insolu, self.acid_encoding)
+        chang_dataset = ProteinDataset(self.test_chang_solu, self.test_chang_insolu, self.acid_encoding)
+        nesg_dataset = ProteinDataset(self.test_nesg_solu, self.test_nesg_insolu, self.acid_encoding)
 
         # dataloader
         train_loader = DataLoader(dataset=protein_dataset, batch_size=self.batch_size, shuffle=True)
+        chang_loader = DataLoader(dataset=chang_dataset, batch_size=self.batch_size, shuffle=True)
+        nesg_loader = DataLoader(dataset=nesg_dataset, batch_size=self.batch_size, shuffle=True)
 
         # 模型
         if torch.cuda.device_count() > 1:
@@ -97,39 +151,37 @@ class Training:
         bar = tqdm(total=self.epoch-1, desc="started training")
         bar.update(self.curr_epoch)
         for epoch in range(self.curr_epoch, self.epoch):
-            loss_data = []
-            for step, (x, y) in enumerate(train_loader):
-                x, y = x.to(self.device), y.to(self.device)
+            # train
+            loss_train_data, acc_train = self._train(train_loader)
 
-                out = self.model(x)
-                loss = self.loss_func(out, y)
+            # test
+            loss_chang_data, chang_acc = self._test(chang_loader)
+            loss_nesg_data, nesg_acc = self._test(nesg_loader)
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
+            self.save_loss(f'{loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
 
-                # 每50步打印一下结果
-                # if step % 2 == 0:
-                loss_data.append(loss.item())
-                self.save_loss(f'{epoch+1},{step+1},{loss.item()}\n')
-                log(f'Epoch:{epoch + 1} Step:{step + 1} Train loss:{loss.item()}', is_print=False)
+            acc = nesg_acc
+            if chang_acc > nesg_acc:
+                acc = chang_acc
 
-                if loss.item() < self.last_loos:
-                    self.last_stop_round_count_epoch = 3
-                    self.last_loos = loss.item()
+            # 保存数据
+            if acc > self.last_acc:
+                self.last_stop_round_count_epoch = 3
+                self.last_acc = acc
 
-                    # 保存模型参数
-                    checkpoint = {
-                        'epoch': epoch,
-                        'model_state_dict': self.model.state_dict(),
-                        'optimizer_state_dict': self.optimizer.state_dict(),
-                        'loss': self.last_loos,
-                    }
-                    torch.save(checkpoint, self.checkpoint_path)
+                # 保存模型参数
+                checkpoint = {
+                    'epoch': epoch,
+                    'model_state_dict': self.model.state_dict(),
+                    'optimizer_state_dict': self.optimizer.state_dict(),
+                    'loss': self.last_acc,
+                }
+                torch.save(checkpoint, self.checkpoint_path)
 
             bar.update(1)
-            bar.set_description(f'epoch: {epoch}, loos: {sum(loss_data)/len(loss_data)}')
+            bar.set_description(f'epoch: {epoch}, loos: {acc}')
 
+            # 至少多跑几圈
             self.last_stop_round_count_epoch -= 1
             if self.last_stop_round_count_epoch == 0:
                 break
