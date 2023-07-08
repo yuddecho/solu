@@ -63,8 +63,6 @@ class Training:
             self.curr_epoch = checkpoint['epoch'] + 1
             self.last_acc = checkpoint['acc']
 
-        self.last_stop_round_count_epoch = 3
-
     def print(self):
         # print log
         log(f'##############  dataset  ##############')
@@ -170,13 +168,12 @@ class Training:
 
             self.save_loss(f'{loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
 
-            acc = nesg_acc
-            if chang_acc > nesg_acc:
-                acc = chang_acc
+            acc = (nesg_acc + chang_acc) / 2
 
             # 保存数据
             if acc > self.last_acc:
-                self.last_stop_round_count_epoch = 3
+                log(f'Info: save model, last-acc {self.last_acc}, curr-acc {acc} > {loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
+
                 self.last_acc = acc
 
                 # 保存模型参数
@@ -186,15 +183,11 @@ class Training:
                     'optimizer_state_dict': self.optimizer.state_dict(),
                     'loss': self.last_acc,
                 }
+
                 torch.save(checkpoint, self.checkpoint_path)
 
             bar.update(1)
-            bar.set_description(f'epoch: {epoch}, loos: {acc}')
-
-            # 至少多跑几圈
-            self.last_stop_round_count_epoch -= 1
-            if self.last_stop_round_count_epoch == 0:
-                break
+            bar.set_description(f'epoch: {epoch}, acc: {acc} loss: {(loss_nesg_data + loss_chang_data) / 2}')
 
 
 def setup_seed(seed=2023):

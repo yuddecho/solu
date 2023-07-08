@@ -132,3 +132,13 @@ for fasta_file_name in files:
                 w.write(f'{seq}\n')
 
 print(finally_number)
+
+train_total = finally_number['tt_pdb_solu'] + finally_number['tt_insolu']
+
+total_num = 0
+for item in finally_number.keys():
+    total_num += finally_number[item]
+
+test_total = total_num - train_total
+
+print(train_total, test_total)
