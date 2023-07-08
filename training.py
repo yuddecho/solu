@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from dataset import ProteinDataset
 from models import KMersCNN
-from args import root, train_solu_dataset, train_insolu_dataset, test_chang_solu, test_chang_insolu, test_nesg_solu, test_nesg_insolu
+from args import root, train_solu_dataset, train_insolu_dataset, test_chang_solu, test_chang_insolu, test_nesg_solu, test_nesg_insolu, is_test
 from units import log
 
 
@@ -35,9 +35,11 @@ class Training:
 
         # acid_encoding = 'one-hot'
         self.acid_encoding = 'natural-number'
-        self.epoch = 300
+        self.epoch = 900
         self.curr_epoch = 0
         self.batch_size = 2000
+        if is_test:
+            self.batch_size = 2
         self.learn_rate = 0.001
 
         self.checkpoint_path = f'{root}/checkpoint.pt'
@@ -66,7 +68,7 @@ class Training:
 
     def print(self):
         # print log
-        log(f'\n##############  dataset  ##############')
+        log(f'##############  dataset  ##############')
         log(f'solu: {self.train_solu}')
         log(f'insolu: {self.train_insolu}')
         log(f'encoding: {self.acid_encoding}')
@@ -96,8 +98,6 @@ class Training:
                 x, y = x.to(self.device), y.to(self.device)
 
                 out = self.model(x)
-                # 这里缺一个评估准确率的
-
                 loss = self.loss_func(out, y)
 
                 total_acc += (out.argmax(1) == y).sum()

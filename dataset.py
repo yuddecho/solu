@@ -8,12 +8,13 @@ import pickle
 import os
 
 from units import binary_search, log
-from args import root, train_solu_dataset, train_insolu_dataset, seq_max_len
+from args import root, train_solu_dataset, train_insolu_dataset, seq_max_len, acid_numb, is_test
 
 
 # ProteinDataset class
 class ProteinDataset(Dataset):
     """ 蛋白质数据集 """
+
     def __init__(self, protein_solu_fasta, protein_insolu_fasta,
                  acid_encoding):
         """
@@ -34,7 +35,7 @@ class ProteinDataset(Dataset):
         self.seq_max_len = seq_max_len
 
         # 氨基酸种类
-        self.acid_class_num = 25
+        self.acid_class_num = acid_numb
 
         # 氨基酸编码方式
         '''
@@ -48,11 +49,11 @@ class ProteinDataset(Dataset):
         self.id_seq_natural_number_encode = {}
         self.seq_natural_number_recode = False  # False 尽可能是读取已编码数据
         self.id_seq_natural_number_encode_dict_pkl = f'{root}/seq_nn_encode.pkl'
-        log(f'{self.id_seq_natural_number_encode_dict_pkl}')
+        # log(f'{self.id_seq_natural_number_encode_dict_pkl}')
 
         # one hot ecode file for dir : dict: python pickle object, key: id, value: seq encode vector
         self.seq_one_hot_encode_dir = f'{root}/one_hot'
-        log(f'{self.seq_one_hot_encode_dir}')
+        # log(f'{self.seq_one_hot_encode_dir}')
 
         # init
 
@@ -66,6 +67,7 @@ class ProteinDataset(Dataset):
         """
         读取 fasta 文件
         """
+        teat_seq_num = 0
         for fasta_file in [protein_solu_fasta, protein_insolu_fasta]:
             with open(fasta_file, 'r', encoding='utf-8') as r:
                 while True:
@@ -81,15 +83,22 @@ class ProteinDataset(Dataset):
                     fasta = fasta[1:]
 
                     label = -1
-                    if '_solu' in fasta:
+                    if '_solu_' in fasta:
                         label = 1
-                    if '_insolu' in fasta:
+                    if '_insolu_' in fasta:
                         label = 0
 
                     if label != -1:
                         self.id.append(f'{fasta}')
                         self.id_seq[fasta] = seq
                         self.id_label[fasta] = label
+
+                        # 测试时，每个文件取 1000
+                        teat_seq_num += 1
+                        if is_test and teat_seq_num == 1000:
+                            teat_seq_num = 0
+                            break
+
                     else:
                         print(fasta)
 
@@ -173,42 +182,38 @@ class ProteinDataset(Dataset):
 
     def _sequence_natural_number_encode(self):
         # 读取已编码数据 215874条数据，3.4G大小
-        if not self.seq_natural_number_recode and os.path.exists(
-                self.id_seq_natural_number_encode_dict_pkl):
-            log(
-                f'Info: natural number encode, find {self.id_seq_natural_number_encode_dict_pkl}, loading...'
-            )
-            with open(self.id_seq_natural_number_encode_dict_pkl, 'rb') as f:
-                self.id_seq_natural_number_encode = pickle.load(f)
-            return
+        # if not self.seq_natural_number_recode and os.path.exists(
+        #         self.id_seq_natural_number_encode_dict_pkl):
+        #     log(
+        #         f'Info: natural number encode, find {self.id_seq_natural_number_encode_dict_pkl}, loading...'
+        #     )
+        #     with open(self.id_seq_natural_number_encode_dict_pkl, 'rb') as f:
+        #         self.id_seq_natural_number_encode = pickle.load(f)
+        #     return
 
         # natural number id
         acid_to_number = {
-            'L': 1,
-            'S': 2,
-            'R': 3,
-            'V': 4,
-            'G': 5,
-            'A': 6,
-            'X': 7,
-            'Q': 8,
-            'I': 9,
-            'O': 10,
-            'D': 11,
-            'P': 12,
-            'E': 13,
-            'W': 14,
-            'H': 15,
-            'T': 16,
-            'Y': 17,
-            'C': 18,
-            'Z': 19,
-            'K': 20,
-            'M': 21,
-            'N': 22,
-            'F': 23,
-            'B': 24,
-            'U': 25
+            'Y': 21,
+            'H': 1,
+            'F': 2,
+            'M': 3,
+            'W': 4,
+            'S': 5,
+            'R': 6,
+            'L': 7,
+            'A': 8,
+            'G': 9,
+            'I': 10,
+            'N': 11,
+            'K': 12,
+            'D': 13,
+            'V': 14,
+            'E': 15,
+            'X': 16,
+            'C': 17,
+            'Q': 18,
+            'T': 19,
+            'P': 20
         }
 
         bar = tqdm(total=self.seq_num, desc='Sequence encode(nn)')
@@ -237,8 +242,8 @@ class ProteinDataset(Dataset):
             bar.update(1)
 
         # 将整体结果写入文件
-        with open(self.id_seq_natural_number_encode_dict_pkl, 'wb') as f:
-            pickle.dump(self.id_seq_natural_number_encode, f)
+        # with open(self.id_seq_natural_number_encode_dict_pkl, 'wb') as f:
+        #     pickle.dump(self.id_seq_natural_number_encode, f)
 
         bar.close()
 

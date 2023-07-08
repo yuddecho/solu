@@ -101,10 +101,22 @@ plt.plot([0, seq_max_len], [10, 10], 'k--')
 plt.plot([x_limit_index, x_limit_index], [0, max(seqLen_seqNum.values())], 'k--')
 # plt.plot([20, 20], [0, max(seqLen_seqNum.values())], 'k--')
 
-plt.show()
+# plt.show()
 # plt.draw()
 
 # 25 {'V', 'A', 'I', 'G', 'U', 'M', 'K', 'X', 'P', 'O', 'N', 'D', 'C', 'Y', 'Q', 'F', 'R', 'S', 'Z', 'L', 'E', 'W', 'T', 'B', 'H'}
 # 21 {'H', 'F', 'M', 'W', 'S', 'R', 'L', 'A', 'G', 'I', 'N', 'K', 'D', 'V', 'E', 'X', 'C', 'Q', 'T', 'P', 'Y'}
 
 print(len(acids_set), acids_set)
+
+t1 = ['V', 'A', 'I', 'G', 'U', 'M', 'K', 'X', 'P', 'O', 'N', 'D', 'C', 'Y', 'Q', 'F', 'R', 'S', 'Z', 'L', 'E', 'W', 'T', 'B', 'H']
+t2 = ['H', 'F', 'M', 'W', 'S', 'R', 'L', 'A', 'G', 'I', 'N', 'K', 'D', 'V', 'E', 'X', 'C', 'Q', 'T', 'P', 'Y']
+
+set1 = set(t1)
+set2 = set(t2)
+
+t3 = set1 - set2
+print(t3, len(t3))
+
+for i in range(len(t2)):
+    print(f"'{t2[i]}': {i+1},")
