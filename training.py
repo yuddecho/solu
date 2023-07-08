@@ -99,7 +99,8 @@ class Training:
                 out = self.model(x)
                 loss = self.loss_func(out, y)
 
-                acc = (out.argmax(1) == y).sum()
+                acc = ((out.argmax(1) == y).sum().item()) / len(y)
+
                 loss_value = loss.item()
 
                 total_acc += acc
@@ -109,7 +110,7 @@ class Training:
                 loss.backward()
                 self.optimizer.step()
 
-                log(f'Info: train Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}')
+                log(f'Info: train Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}', False)
 
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
@@ -125,13 +126,13 @@ class Training:
                 out = self.model(x)
                 loss = self.loss_func(out, y)
 
-                acc = (out.argmax(1) == y).sum()
+                acc = ((out.argmax(1) == y).sum().item()) / len(y)
                 loss_value = loss.item()
 
                 total_acc += acc
                 total_loss_data += loss_value
 
-                log(f'Info: Test {test_set_name} Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}')
+                log(f'Info: Test {test_set_name} Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}', False)
 
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
