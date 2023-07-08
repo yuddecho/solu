@@ -18,7 +18,7 @@ from units import log
 
 # main
 class Training:
-    def __init__(self):
+    def __init__(self, resume):
         # args
         os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,12 +51,11 @@ class Training:
         self.loss_func = nn.CrossEntropyLoss()  # 交叉熵
 
         self.loss_data = f'{root}/loos.csv'
-        self.save_loss('init ...')
 
         self.last_acc = -1
 
         # checkpoint
-        self.resume = False
+        self.resume = resume
         if self.resume and os.path.exists(self.checkpoint_path):
             checkpoint = torch.load(self.checkpoint_path)
             self.model.load_state_dict(checkpoint['model_state_dict'])
@@ -86,7 +85,7 @@ class Training:
         with open(self.loss_data, 'a', encoding='utf-8') as w:
             w.write(f'{msg}\n')
 
-    def _train(self, data_loader):
+    def _train(self, epoch, data_loader):
         # https://www.jianshu.com/p/1cc53eef82bf
         # 每一批训练
         self.model.train()
@@ -100,16 +99,21 @@ class Training:
                 out = self.model(x)
                 loss = self.loss_func(out, y)
 
-                total_acc += (out.argmax(1) == y).sum()
-                total_loss_data += loss.item()
+                acc = (out.argmax(1) == y).sum()
+                loss_value = loss.item()
+
+                total_acc += acc
+                total_loss_data += loss_value
 
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
 
+                log(f'Info: train Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}')
+
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
-    def _test(self, data_loader):
+    def _test(self, epoch, data_loader, test_set_name):
         self.model.eval()
         total_loss_data = 0
         total_acc = 0
@@ -121,8 +125,13 @@ class Training:
                 out = self.model(x)
                 loss = self.loss_func(out, y)
 
-                total_acc += (out.argmax(1) == y).sum()
-                total_loss_data += loss.item()
+                acc = (out.argmax(1) == y).sum()
+                loss_value = loss.item()
+
+                total_acc += acc
+                total_loss_data += loss_value
+
+                log(f'Info: Test {test_set_name} Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}')
 
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
@@ -205,9 +214,24 @@ def setup_seed(seed=2023):
     # 尽管设置的了种子，但nn.Embedding()初始化还是会不一致，可使用持久化保持
 
 
-if __name__ == '__main__':
+def init(resume):
     setup_seed()
 
-    training = Training()
+    # 删除文件
+    if not resume:
+        loos_file = f'{root}/loos.csv'
+        if os.path.exists(loos_file):
+            os.remove(loos_file)
+
+        log_file = f'{root}/train.log'
+        if os.path.exists(log_file):
+            os.remove(loos_file)
+
+
+if __name__ == '__main__':
+    is_resume = False
+    init(is_resume)
+
+    training = Training(is_resume)
     training.print()
     training.run()

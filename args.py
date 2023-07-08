@@ -2,7 +2,7 @@
 
 import os
 
-is_test = True
+is_test = False
 
 root = '/public/home/yudong/protein'
 
