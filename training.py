@@ -37,7 +37,7 @@ class Training:
         self.acid_encoding = 'natural-number'
         self.epoch = 900
         self.curr_epoch = 0
-        self.batch_size = 2000
+        self.batch_size = 1024
         if is_test:
             self.batch_size = 2
         self.learn_rate = 0.001
@@ -161,11 +161,11 @@ class Training:
         bar.update(self.curr_epoch)
         for epoch in range(self.curr_epoch, self.epoch):
             # train
-            loss_train_data, acc_train = self._train(train_loader)
+            loss_train_data, acc_train = self._train(epoch, train_loader)
 
             # test
-            loss_chang_data, chang_acc = self._test(chang_loader)
-            loss_nesg_data, nesg_acc = self._test(nesg_loader)
+            loss_chang_data, chang_acc = self._test(epoch, chang_loader, 'chang')
+            loss_nesg_data, nesg_acc = self._test(epoch, nesg_loader, 'nesg')
 
             self.save_loss(f'{loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
 
@@ -225,7 +225,7 @@ def init(resume):
 
         log_file = f'{root}/train.log'
         if os.path.exists(log_file):
-            os.remove(loos_file)
+            os.remove(log_file)
 
 
 if __name__ == '__main__':
