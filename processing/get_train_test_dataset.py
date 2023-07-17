@@ -1,7 +1,6 @@
 import random
 
-is_test = True
-
+is_test = False
 
 
 def dataset_random(source_file, train_target_file, test_target_file, source_num, target_num):

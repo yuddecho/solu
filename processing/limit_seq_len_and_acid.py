@@ -4,7 +4,13 @@ finally_number = {}
 # seq_min, seq_max = 30, 622
 seq_min, seq_max = 34, 551
 seq_count = 0
-root = '../../data/db'
+
+is_test = False
+
+if is_test:
+    root = '../../data/db'
+else:
+    root = '/public/home/yudong/protein'
 
 test_acid_set = ['H', 'F', 'M', 'W', 'S', 'R', 'L', 'A', 'G', 'I', 'N', 'K', 'D', 'V', 'E', 'X', 'C', 'Q', 'T', 'P', 'Y']
 test_acid_set = set(test_acid_set)
