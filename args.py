@@ -11,17 +11,26 @@ if is_test:
 
 log_file = f'{root}/train.log'
 
-train_solu_dataset = f'{root}/finally/tt_pdb_solu.fasta'
-train_insolu_dataset = f'{root}/finally/tt_insolu.fasta'
+# train_solu_dataset = f'{root}/finally/tt_pdb_solu.fasta'
+# train_insolu_dataset = f'{root}/finally/tt_insolu.fasta'
+train_solu_dataset = f'{root}/finally/train_tt_pdb_solu.fasta'
+train_insolu_dataset = f'{root}/finally/train_tt_insolu.fasta'
 
-test_chang_solu = f'{root}/finally/chang_solu.fasta'
-test_chang_insolu = f'{root}/finally/chang_insolu.fasta'
+test_solu_dataset = f'{root}/finally/test_tt_pdb_solu.fasta'
+test_insolu_dataset = f'{root}/finally/test_tt_insolu.fasta'
 
-test_nesg_solu = f'{root}/finally/nesg_solu.fasta'
-test_nesg_insolu = f'{root}/finally/nesg_insolu.fasta'
+val_chang_solu = f'{root}/finally/chang_solu.fasta'
+val_chang_insolu = f'{root}/finally/chang_insolu.fasta'
 
-seq_max_len = 1186
-acid_numb = 21
+val_nesg_solu = f'{root}/finally/nesg_solu.fasta'
+val_nesg_insolu = f'{root}/finally/nesg_insolu.fasta'
+
+# test data info
+# 34 1697
+# 7906 7826.94 79.0600000000004
+# 551
+seq_max_len = 551
+acid_numb = 34
 
 
 if __name__ == '__main__':

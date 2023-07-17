@@ -50,7 +50,7 @@ def get_mmseqs(root_dir, mmseqs_files, tag):
     return res
 
 
-def get_tmbed(root_dir, file_names):
+def get_numbers(root_dir, file_names):
     res = {}
 
     for file_name in file_names:
@@ -72,6 +72,23 @@ source_file_number = get_source(root)
 cleaned_file_number = get_cleaned(root, files)
 
 # mmseqs
+"""
+    各个数据源去除同一性超过90%的数据
+    同一数据源可溶与不可溶数据之间去除同一性为 100% 的数据
+    
+    去除 tt_solu 中与 pdb_solu 同一性超过 90% 的数据
+    
+    去除 tt_insolu 中与 pdb_solu 同一性为 100% 的数据
+    去除 chang_insolu 中与 pdb_solu 同一性为 100% 的数据
+    去除 nesg_insolu 中与 pdb_solu 同一性为 100% 的数据
+    
+    合并 tt_solu 与 pdb_solu 数据，得到 tt_pdb_solu
+    
+    去除 tt_pdb_solu 中与 chang_solu 同一性超过 30% 的数据
+    去除 tt_insolu 中与 chang_insolu 同一性超过 30% 的数据
+    去除 tt_pdb_solu 中与 nesg_solu 同一性超过 30% 的数据
+    去除 tt_insolu 中与 nesg_insolu 同一性超过 30% 的数据
+"""
 mmseqs_res_seq = get_mmseqs(root, files, "_rep_seq")
 mmseqs_res_seq_100 = get_mmseqs(root, files, "_rep_seq_100")
 mmseqs_res_seq_100_100 = get_mmseqs(root, files, "_rep_seq_100_100")
@@ -85,60 +102,90 @@ print(mmseqs_res_seq_100)
 print(mmseqs_res_seq_100_100)
 print(mmseqs_res_seq_100_100_30)
 
-
-# cols = ['tt', 'tt_solu', 'tt_insolu', 'pdb_solu', 'chang', 'chang_solu', 'chang_insolu', 'nesg', 'nesg_solu', 'nesg_insolu']
-#
-# with open(f'{root}/db/res.csv', 'w', encoding='utf-8') as w:
-#     w.write(f',,ttdb,tt-solu,tt-insolu,pdb,chang,chang-solu,chang-insolu,nesg,nesg-solu,nesg-insolu\n')
-#     w.write(f',,ttdb,tt-solu,tt-insolu,pdb,chang,chang-solu,chang-insolu,nesg,nesg-solu,nesg-insolu\n')
-
 # tmbed
 files = ['tt_pdb_solu', 'tt_insolu', 'chang_solu', 'chang_insolu', 'nesg_solu', 'nesg_insolu']
-tmbed_number = get_tmbed(f'{root}/db/tmbed', files)
+tmbed_number = get_numbers(f'{root}/db/tmbed', files)
+
+# tt_pdb_solu 找出 tt 和 pdb
+tt_solu_total, pdb_solu_total = 0, 0
+with open(f'{root}/db/tmbed/tt_pdb_solu.fasta', 'r', encoding='utf-8') as r:
+    while True:
+        fasta = r.readline()
+        seq = r.readline()
+
+        fasta = fasta.strip()
+        if not fasta:
+            break
+
+        if '_solu_pdb' in fasta:
+            pdb_solu_total += 1
+            continue
+
+        if '_solu_tt' in fasta:
+            tt_solu_total += 1
+
+tmbed_number['tt_solu'], tmbed_number['pdb_solu'] = tt_solu_total, pdb_solu_total
+
 print(tmbed_number)
 
-# finally 裁剪长度
+# finally 裁剪长度之后
 files = ['tt_pdb_solu', 'tt_insolu', 'chang_solu', 'chang_insolu', 'nesg_solu', 'nesg_insolu']
-finally_number = {}
-# seq_min, seq_max = 30, 622
-seq_min, seq_max = 20, 1186
-seq_count = 0
+finally_number = get_numbers(f'{root}/db/finally', files)
 
-for fasta_file_name in files:
-    fasta_file = f'{root}/db/tmbed/{fasta_file_name}.fasta'
-    target_file = f'{root}/db/finally/{fasta_file_name}.fasta'
+# tt_pdb_solu 找出 tt 和 pdb
+tt_solu_total, pdb_solu_total = 0, 0
+with open(f'{root}/db/finally/tt_pdb_solu.fasta', 'r', encoding='utf-8') as r:
+    while True:
+        fasta = r.readline()
+        seq = r.readline()
 
-    with open(target_file, 'w', encoding='utf-8') as w:
-        with open(fasta_file, 'r', encoding='utf-8') as r:
-            while True:
-                fasta = r.readline()
-                seq = r.readline()
+        fasta = fasta.strip()
+        if not fasta:
+            break
 
-                seq = seq.strip()
+        if '_solu_pdb' in fasta:
+            pdb_solu_total += 1
+            continue
 
-                if not seq:
-                    finally_number[fasta_file_name] = seq_count
-                    seq_count = 0
-                    break
+        if '_solu_tt' in fasta:
+            tt_solu_total += 1
 
-                # 限制长度
-                seq_len = len(seq)
-                if seq_len < seq_min or seq_len > seq_max:
-                    continue
-
-                seq_count += 1
-
-                w.write(fasta)
-                w.write(f'{seq}\n')
+finally_number['tt_solu'], finally_number['pdb_solu'] = tt_solu_total, pdb_solu_total
 
 print(finally_number)
 
-train_total = finally_number['tt_pdb_solu'] + finally_number['tt_insolu']
+cols = ['pdb_solu', 'tt', 'tt_solu', 'tt_insolu', 'chang', 'chang_solu', 'chang_insolu', 'nesg', 'nesg_solu', 'nesg_insolu']
+data_dict = [source_file_number, cleaned_file_number, mmseqs_res_seq, mmseqs_res_seq_100, mmseqs_res_seq_100_100, mmseqs_res_seq_100_100_30, tmbed_number, finally_number]
 
-total_num = 0
-for item in finally_number.keys():
-    total_num += finally_number[item]
+with open(f'{root}/db/res.csv', 'w', encoding='utf-8') as w:
+    for col_name in cols:
+        w.write(f'{col_name},')
+    w.write('\n')
 
-test_total = total_num - train_total
+    for data_item in data_dict:
+        for col_name in cols:
+            w.write(f'{data_item.get(col_name, "-")},')
+        w.write('\n')
 
-print(train_total, test_total)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

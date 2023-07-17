@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from dataset import ProteinDataset
 from models import KMersCNN
-from args import root, train_solu_dataset, train_insolu_dataset, test_chang_solu, test_chang_insolu, test_nesg_solu, test_nesg_insolu, is_test
+from args import root, train_solu_dataset, train_insolu_dataset, test_solu_dataset, test_insolu_dataset, val_chang_solu, val_chang_insolu, val_nesg_solu, val_nesg_insolu, is_test
 from units import log
 
 
@@ -27,11 +27,14 @@ class Training:
         self.train_solu = train_solu_dataset
         self.train_insolu = train_insolu_dataset
 
-        self.test_chang_solu = test_chang_solu
-        self.test_chang_insolu = test_chang_insolu
+        self.test_solu = test_solu_dataset
+        self.test_insolu = test_insolu_dataset
 
-        self.test_nesg_solu = test_nesg_solu
-        self.test_nesg_insolu = test_nesg_insolu
+        self.val_chang_solu = val_chang_solu
+        self.va_chang_insolu = val_chang_insolu
+
+        self.val_nesg_solu = val_nesg_solu
+        self.val_nesg_insolu = val_nesg_insolu
 
         # acid_encoding = 'one-hot'
         self.acid_encoding = 'natural-number'
@@ -77,7 +80,6 @@ class Training:
         log(f'device: {self.device}')
         log(f'{self.checkpoint_path}')
         log(f'{self.loss_data}')
-        log(f'\n')
 
     def save_loss(self, msg):
         with open(self.loss_data, 'a', encoding='utf-8') as w:
@@ -112,7 +114,7 @@ class Training:
 
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
-    def _test(self, epoch, data_loader, test_set_name):
+    def _test_val(self, epoch, data_loader, test_set_name):
         self.model.eval()
         total_loss_data = 0
         total_acc = 0
@@ -130,20 +132,20 @@ class Training:
                 total_acc += acc
                 total_loss_data += loss_value
 
-                log(f'Info: Test {test_set_name} Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}', False)
+                log(f'Info: {test_set_name} Epoch {epoch}, Step {step}, Acc {acc}, Loss {loss_value}', False)
 
         return total_loss_data / len(data_loader), total_acc / len(data_loader)
 
-        pass
-
     def run(self):
         # dataset
-        protein_dataset = ProteinDataset(self.train_solu, self.train_insolu, self.acid_encoding)
-        chang_dataset = ProteinDataset(self.test_chang_solu, self.test_chang_insolu, self.acid_encoding)
-        nesg_dataset = ProteinDataset(self.test_nesg_solu, self.test_nesg_insolu, self.acid_encoding)
+        train_dataset = ProteinDataset(self.train_solu, self.train_insolu, self.acid_encoding)
+        test_dataset = ProteinDataset(self.test_solu, self.test_insolu, self.acid_encoding)
+        chang_dataset = ProteinDataset(self.val_chang_solu, self.va_chang_insolu, self.acid_encoding)
+        nesg_dataset = ProteinDataset(self.val_nesg_solu, self.val_nesg_insolu, self.acid_encoding)
 
         # dataloader
-        train_loader = DataLoader(dataset=protein_dataset, batch_size=self.batch_size, shuffle=True)
+        train_loader = DataLoader(dataset=train_dataset, batch_size=self.batch_size, shuffle=True)
+        test_loader = DataLoader(dataset=test_dataset, batch_size=self.batch_size, shuffle=True)
         chang_loader = DataLoader(dataset=chang_dataset, batch_size=self.batch_size, shuffle=True)
         nesg_loader = DataLoader(dataset=nesg_dataset, batch_size=self.batch_size, shuffle=True)
 
@@ -163,16 +165,21 @@ class Training:
             loss_train_data, acc_train = self._train(epoch, train_loader)
 
             # test
-            loss_chang_data, chang_acc = self._test(epoch, chang_loader, 'chang')
-            loss_nesg_data, nesg_acc = self._test(epoch, nesg_loader, 'nesg')
+            loss_test_data, acc_test = self._test_val(epoch, test_loader, 'Test')
 
-            self.save_loss(f'{loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
+            # val
+            loss_chang_data, chang_acc = self._test_val(epoch, chang_loader, 'Val chang')
+            loss_nesg_data, nesg_acc = self._test_val(epoch, nesg_loader, 'Val nesg')
+
+            # save to loss.csv
+            self.save_loss(f'{loss_train_data},{loss_test_data},{loss_chang_data},{loss_nesg_data},{acc_train},{acc_test},{chang_acc},{nesg_acc}')
 
             acc = (nesg_acc + chang_acc) / 2
 
             # 保存数据
             if acc > self.last_acc:
-                log(f'Info: save model, last-acc {self.last_acc}, curr-acc {acc} > {loss_train_data},{loss_chang_data},{loss_nesg_data},{acc_train},{chang_acc},{nesg_acc}')
+                # write to train.log
+                log(f'Info: save model, last-acc {self.last_acc}, curr-acc {acc} > {loss_train_data},{loss_test_data},{loss_chang_data},{loss_nesg_data},{acc_train},{acc_test},{chang_acc},{nesg_acc}')
 
                 self.last_acc = acc
 

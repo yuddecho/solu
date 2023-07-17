@@ -2,7 +2,7 @@
 files = ['tt_pdb_solu', 'tt_insolu', 'chang_solu', 'chang_insolu', 'nesg_solu', 'nesg_insolu']
 finally_number = {}
 # seq_min, seq_max = 30, 622
-seq_min, seq_max = 20, 1186
+seq_min, seq_max = 34, 551
 seq_count = 0
 root = '../../data/db'
 
@@ -45,4 +45,6 @@ for fasta_file_name in files:
                 w.write(fasta)
                 w.write(f'{seq}\n')
 
+
+# {'tt_pdb_solu': 49556, 'tt_insolu': 80084, 'chang_solu': 528, 'chang_insolu': 340, 'nesg_solu': 4356, 'nesg_insolu': 2487}
 print(finally_number)

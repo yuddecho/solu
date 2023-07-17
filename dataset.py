@@ -67,7 +67,7 @@ class ProteinDataset(Dataset):
         """
         读取 fasta 文件
         """
-        teat_seq_num = 0
+        test_seq_num = 0
         for fasta_file in [protein_solu_fasta, protein_insolu_fasta]:
             with open(fasta_file, 'r', encoding='utf-8') as r:
                 while True:
@@ -94,9 +94,9 @@ class ProteinDataset(Dataset):
                         self.id_label[fasta] = label
 
                         # 测试时，每个文件取 1000
-                        teat_seq_num += 1
-                        if is_test and teat_seq_num == 1000:
-                            teat_seq_num = 0
+                        test_seq_num += 1
+                        if is_test and test_seq_num == 1000:
+                            test_seq_num = 0
                             break
 
                     else:
